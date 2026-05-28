@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+
+# Build artifacts
+build/
+*.zip
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Claude
+.claude/
