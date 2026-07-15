@@ -1,19 +1,24 @@
-# janken-line-bot
+# Janken LINE Bot
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-FF9900?logo=awslambda&logoColor=white)
+![API Gateway](https://img.shields.io/badge/AWS-API%20Gateway-FF4F8B?logo=amazonapigateway&logoColor=white)
 ![LINE](https://img.shields.io/badge/LINE-Messaging%20API-06C755?logo=line&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-LINE で `/janken 太郎 花子 次郎` のように送信すると、その人たちでじゃんけんを行うことができる LINE Bot。
+A serverless LINE bot that plays **janken** (rock-paper-scissors) for you.
+Send `/janken Taro Hanako Jiro` in any LINE chat, and the bot instantly draws hands
+for every player and announces the winners in a rich, card-style message.
+
+Perfect for settling everyday debates — who buys coffee, who goes first, who does the dishes.
 
 <p align="center">
-  <img src="docs/demo.jpeg" alt="じゃんけんjpeg" width="240">
+  <img src="docs/demo.jpeg" alt="Result card screenshot" width="240">
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="docs/demo.gif" alt="じゃんけんgif" width="240">
+  <img src="docs/demo.gif" alt="Demo animation" width="240">
 </p>
 
-## アーキテクチャ
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -29,10 +34,10 @@ flowchart LR
         Lambda[Lambda]
     end
 
-    User <-->|メッセージ| LineApp
+    User <-->|Message| LineApp
     LineApp -->|Webhook| APIGW
     APIGW -->|Invoke| Lambda
-    Lambda -->|Reply| LineApp
+    Lambda -->|Reply API| LineApp
 
     classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:1px,color:#fff
     classDef line fill:#06C755,stroke:#04A648,stroke-width:1px,color:#fff
@@ -43,16 +48,42 @@ flowchart LR
     style LINE fill:#E8F8EE,stroke:#06C755,stroke-width:1.5px,color:#06C755
 ```
 
-## セットアップ
+1. A user sends `/janken <names...>` in a LINE chat.
+2. The LINE Platform delivers the event to an **API Gateway** endpoint via webhook.
+3. **AWS Lambda** verifies the `X-Line-Signature` header, parses the command, plays the game, and replies through the LINE **Reply API**.
 
-### 1. LINE Developers でチャネル作成
+## Usage
 
-1. [LINE Developers Console](https://developers.line.biz/console/) で **Messaging API** チャネルを作成
-2. **チャネルアクセストークン** と **チャネルシークレット** を取得
-3. **Webhook URL** に API Gateway のエンドポイントを設定（後述）
-4. **Webhook の利用** を有効化、**応答メッセージ** を無効化
+Send the following in a group or 1-on-1 LINE chat:
 
-### 2. AWS Lambda を作成
+```
+/janken Taro Hanako Jiro
+```
+
+| Input | Behavior |
+|---|---|
+| 2–10 unique names | Plays janken and replies with a result card |
+| `/janken` (no arguments) | Replies with usage instructions |
+| Fewer than 2 names | Asks for at least 2 players |
+| More than 10 names | Asks to reduce to 10 or fewer |
+| Duplicate names | Asks for unique names |
+
+## Getting Started
+
+### Prerequisites
+
+- An AWS account with the [AWS CLI](https://docs.aws.amazon.com/cli/) configured
+- A [LINE Developers](https://developers.line.biz/console/) account
+- Python 3.12
+
+### 1. Create a LINE Messaging API channel
+
+1. Create a **Messaging API** channel in the [LINE Developers Console](https://developers.line.biz/console/).
+2. Note the **channel access token** and **channel secret**.
+3. Enable **Use webhook** and disable **Auto-reply messages**.
+   (You will set the webhook URL after creating the API Gateway endpoint in step 3.)
+
+### 2. Create the Lambda function
 
 ```bash
 aws lambda create-function \
@@ -66,63 +97,58 @@ aws lambda create-function \
   --zip-file fileb://lambda_function.zip
 ```
 
-環境変数として以下を設定：
+Set the following environment variables on the function
+(see [.env.example](.env.example)):
 
 | Key | Value |
 |---|---|
-| `LINE_CHANNEL_ACCESS_TOKEN` | LINE Developers で取得した値 |
-| `LINE_CHANNEL_SECRET` | LINE Developers で取得した値 |
+| `LINE_CHANNEL_ACCESS_TOKEN` | Channel access token from the LINE Developers Console |
+| `LINE_CHANNEL_SECRET` | Channel secret from the LINE Developers Console |
 
-### 3. API Gateway を作成
+### 3. Create the API Gateway endpoint
 
-- HTTP API を作成、Lambda 統合で `janken-line-bot` を指定
-- 生成されたエンドポイントを LINE の Webhook URL に設定
+1. Create an **HTTP API** with a Lambda integration pointing at `janken-line-bot`.
+2. Set the generated endpoint URL as the **Webhook URL** in the LINE Developers Console and verify it.
 
-### 4. デプロイ
+### 4. Deploy
 
-ローカルから Lambda を更新する場合：
+The included script packages the code with its dependencies and uploads it:
 
 ```bash
 ./scripts/deploy.sh
 ```
 
-環境変数で関数名・リージョンの上書き可能：
+The function name and region can be overridden via environment variables:
 
 ```bash
 FUNCTION_NAME=my-bot REGION=us-east-1 ./scripts/deploy.sh
 ```
 
-## 使い方
-
-LINE のグループまたは個人トークで以下を送信：
-
-```
-/janken 太郎 花子 次郎
-```
-
-- **2人以上 10人以下** で名前を指定
-- 名前の重複はエラー
-- 引数なしで送ると使い方が返る
-
-## ディレクトリ構成
+## Project Structure
 
 ```
 .
 ├── lambda/
-│   ├── main.py            # Lambda エントリーポイント (Webhook処理 + じゃんけんロジック)
-│   └── requirements.txt
+│   ├── main.py            # Lambda entry point: webhook handling, signature
+│   │                      # verification, game logic, Flex Message rendering
+│   └── requirements.txt   # Runtime dependencies
 ├── scripts/
-│   └── deploy.sh          # AWS Lambda へのデプロイスクリプト
-├── .env.example           # 環境変数のテンプレート
+│   └── deploy.sh          # One-command build & deploy to AWS Lambda
+├── docs/                  # Demo screenshots
+├── .env.example           # Environment variable template
 └── README.md
 ```
 
-## 技術スタック
+## Tech Stack
 
-- Python 3.12
-- AWS Lambda + API Gateway
-- LINE Messaging API (Webhook + Reply API + Flex Message)
+| Layer | Technology |
+|---|---|
+| Language | Python 3.12 (type-annotated) |
+| Compute | AWS Lambda |
+| Routing | Amazon API Gateway (HTTP API) |
+| Messaging | LINE Messaging API — Webhook, Reply API, Flex Message |
+| Deployment | Bash + AWS CLI (`scripts/deploy.sh`) |
 
-## ライセンス
+## License
 
-MIT
+[MIT](LICENSE)
