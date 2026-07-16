@@ -20,33 +20,11 @@ Perfect for settling everyday debates — who buys coffee, who goes first, who d
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    User([User])
+<p align="center">
+  <img src="docs/architecture.png" alt="A user chats in the LINE App. The LINE Platform's Messaging API delivers the event to AWS API Gateway via webhook, which invokes Lambda. Lambda responds through the LINE Reply API." width="500">
+</p>
 
-    subgraph LINE [LINE Platform]
-        LineApp[LINE App]
-    end
-
-    subgraph AWS [AWS]
-        direction TB
-        APIGW[API Gateway]
-        Lambda[Lambda]
-    end
-
-    User <-->|Message| LineApp
-    LineApp -->|Webhook| APIGW
-    APIGW -->|Invoke| Lambda
-    Lambda -->|Reply API| LineApp
-
-    classDef aws fill:#FF9900,stroke:#232F3E,stroke-width:1px,color:#fff
-    classDef line fill:#06C755,stroke:#04A648,stroke-width:1px,color:#fff
-    class APIGW,Lambda aws
-    class LineApp line
-
-    style AWS fill:#FFF4E5,stroke:#FF9900,stroke-width:1.5px,color:#FF9900
-    style LINE fill:#E8F8EE,stroke:#06C755,stroke-width:1.5px,color:#06C755
-```
+<sub>Generated with [Diagrams](https://diagrams.mingrammer.com/) — see [docs/architecture.py](docs/architecture.py).</sub>
 
 1. A user sends `/janken <names...>` in a LINE chat.
 2. The LINE Platform delivers the event to an **API Gateway** endpoint via webhook.
