@@ -24,7 +24,6 @@ Perfect for settling everyday debates — who buys coffee, who goes first, who d
   <img src="docs/architecture.png" alt="A user chats in the LINE App. The LINE Platform's Messaging API delivers the event to AWS API Gateway via webhook, which invokes Lambda. Lambda responds through the LINE Reply API." width="500">
 </p>
 
-<sub>Generated with [Diagrams](https://diagrams.mingrammer.com/) — see [docs/architecture.py](docs/architecture.py).</sub>
 
 1. A user sends `/janken <names...>` in a LINE chat.
 2. The LINE Platform delivers the event to an **API Gateway** endpoint via webhook.
